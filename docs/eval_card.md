@@ -2,8 +2,8 @@
 
 Card này đi kèm mỗi báo cáo và được dùng lại ở Day 10. Mọi con số dưới đây chép từ report do script sinh ra (`src/reports/*.json`); không có số nào gõ tay.
 
-- **Run ID / eval set SHA:** baseline `E-swarm-20261117-8e31` · PR mẫu `E-fixed-20261117-8e31`, `E-seeded_regression-20261117-8e31` · eval set SHA `8e31f4d19ef3`
-- **Phiên bản:** code = commit cuối của PR `starter/d09` · eval set v1 (sha `8e31f4d19ef3`) · metric_spec `1.0` · graders `src/lab9/graders.py` cùng commit · seeds 11/22/33/44/55 · MockLLM · Python 3.11 (máy local), 3.13 (CI)
+- **Run ID / eval set SHA:** baseline `E-swarm-20261117-2e4f` · PR mẫu `E-fixed-20261117-2e4f`, `E-seeded_regression-20261117-2e4f` · eval set SHA `2e4fbdde4b30`
+- **Phiên bản:** code = commit cuối của PR `starter/d09` · eval set v1 (sha `2e4fbdde4b30`) · metric_spec `1.0` · graders `src/lab9/graders.py` cùng commit · seeds 11/22/33/44/55 · MockLLM · Python 3.11 (máy local), 3.13 (CI)
 - **Eval set:** v1, 14 item × 5 seed = 70 trial, nguồn `lab8_public` (ma trận T01–T14); nhãn ở `labels_v1.json`, tách khỏi item; `failure_modes` gắn theo `docs/failure_taxonomy.md`
 - **Metric & ngưỡng** (`config/metric_spec.yaml`):
 
