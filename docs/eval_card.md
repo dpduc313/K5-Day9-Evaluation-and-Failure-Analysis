@@ -44,4 +44,23 @@ Card này đi kèm mỗi báo cáo và được dùng lại ở Day 10. Mọi co
   - Không đo trên người dùng thật.
   - Baseline `swarm` của Lab 8 **không phát event `reply`**, nên `reply_amount_matches_ledger` trên baseline bằng 1.0 một cách hiển nhiên. Metric này chỉ có ý nghĩa với shape có trả lời khách.
   - Bằng chứng FM-04, 06, 07, 08 đến từ kịch bản bật công tắc lỗi, không phải lỗi tự phát của agent.
+## v2 — slice, pass^k, chống gian lận eval (M5–M7)
+
+- **Run ID / eval set SHA:** baseline `E-swarm-20261117-c3b6`, eval set v2 SHA `c3b6f011f7c9` (28 item = 14 v1 + 14 pack đối kháng, × 5 seed = 140 trial), `config/metric_spec_v2.yaml` (`2.0`).
+- **Ngưỡng chọn từ A/A.** `python -m lab9.mutation --spec config/metric_spec_v2.yaml --aa 66,77,88,99,110`: cùng agent `swarm` trên hai bộ seed cho **Δ = 0.0000 ở mọi metric**. MockLLM tất định theo (claim, seed), và điểm yếu duy nhất của `swarm` (tin ticket khi `seed % 5 == 0`) rơi vào đúng một seed ở cả hai bộ (55 và 110). Với LLM thật, cùng seed vẫn có thể ra câu trả lời khác (sampling, phiên bản model, timeout tool), nên dải nhiễu A/A > 0 và sàn phải nằm **dưới baseline trừ dải đó**; nếu không, PR trung thực bị chặn ngẫu nhiên. Sàn `pass_hat_5` chọn **0.85**: baseline 0.8929, cách sàn hơn một item (1/28 = 0.036); `flaky_regression` 0.5714.
+- **Slice nào bắt lỗi nào** (tag lấy từ nhãn, không từ output của agent):
+
+| Slice (số item) | Baseline | Bắt được | Giá trị trên variant lỗi |
+|---|---|---|---|
+| `money_movement` (12) | 1.0 | `slice_regression` (**chỉ slice này chặn**: `pass_rate` trung bình 0.9357 vẫn trên sàn 0.85), `f_sum_parts_odd`, `flaky_regression`, `s_sum_parts`, `s_round_down`, `s_pre_deducted`, `s_sibling_refund` | `slice_regression` 0.85, `s_sibling_refund` 0.083 |
+| `adversarial` (14) | 0.971 | `seeded_regression`, `s_round_down`, `s_pre_deducted`, `s_sibling_refund` | `seeded_regression` 0.571 |
+| `denial` (11) | 0.945 | `s_ticket_trust`, `s_quiet_override`, `s_stale_clause`, `s_ignore_denied` | `seeded_regression` 0.364 |
+| `escalation` (4) | 1.0 | chưa variant nào làm hỏng (FM-09 chưa quan sát được lỗi) | — |
+
+- **pass^k bắt lỗi chập chờn.** `flaky_regression` (làm tròn sai ở 1/5 seed): `pass_hat_5` 0.5714 < 0.85 → BLOCK. Kịch bản `s_quiet_override` (FM-03 không để lại event override) vẫn bị chặn qua `refund_amount_correct` và slice `denial`.
+- **Scorecard** (`python -m lab9.mutation --spec config/metric_spec_v2.yaml --baseline reports/baseline_v2.json`): `mutation score 3/3 · false alarms 0`. Bộ 16 kịch bản của nhóm trên v2: **16/16 đúng kỳ vọng** (13 lỗi bị chặn, 3 thay đổi vô hại được merge); `f_sum_parts_odd`, từng lọt gate v1, bị slice `money_movement` chặn.
+- **Chống gian lận eval** (`gate.integrity_check`): cả 4 trap công khai bị chặn với lý do `INTEGRITY` (dòng mất điểm do grader crash, 131/140 dòng, tập seed khác baseline, spec bị nới khi so với `--base-spec`). Thêm 9 kiểu gian lận tự dựng trong `src/tests/test_lab9_advanced_team.py`: dòng trùng lặp thay dòng fail, `evaluator_failures` trên run xanh, metric sửa tay không khớp rows, đổi nhãn slice, điểm không phải boolean, đổi tên item, metric `inf`, và 10 cách nới spec (bỏ slice, bỏ CI, hạ sàn, bỏ blocking, nâng trần an toàn, bỏ metric, bớt seed, nới độ tin cậy CI).
+- **Giới hạn cỡ mẫu.** Lỗi chỉ xuất hiện ở seed chia hết cho 3 (`rare`) chạm 1/5 seed của bộ 11…55 (chỉ seed 33). Một lỗi xuất hiện ngẫu nhiên với xác suất p = 1/3 mỗi lần chạy thì vẫn lọt hoàn toàn khỏi 5 seed với xác suất (2/3)^5 ≈ 13%; muốn ≥ 95% thấy nó ít nhất một lần cần ≥ 8 seed ((2/3)^8 ≈ 3.9%). **Không hạ ngưỡng** để gate "bắt" được lỗi kiểu này: cách đúng là tăng số seed hoặc số item ở eval-set version sau.
+- **Giới hạn v2:** pack đối kháng do giảng viên viết, chỉ 14 claim, mỗi FM 3–7 item nên slice nhỏ có CI rộng; slice `escalation` chỉ 4 item. FM-09 chưa có lỗi thật để kiểm grader.
+
 - **Khi nào tăng eval-set version:** khi thêm item (ví dụ từ trace case với `provenance.from_trace`), đổi nhãn, hoặc thêm pack đối kháng (v2). Khi đó phải chạy lại baseline; ngưỡng chỉ được chặt hơn trên cùng version.
