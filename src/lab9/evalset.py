@@ -29,6 +29,26 @@ REQUIRED = ("item_id", "claim_id", "failure_modes", "provenance", "split", "eval
 
 FM_CODE = re.compile(r"FM-\d{2}")
 
+# M1: failure modes each public claim exercises, specific mode first. Evidence (shape claim@seed,
+# first signal event) is in docs/failure_taxonomy.md. FM-01 is on every item: every label carries
+# a canary in forbid_substrings and the leaky_trace scenario leaks it on all 14 claims.
+FAILURE_MODES_V1: dict[str, list[str]] = {
+    "C-001": ["FM-07", "FM-04", "FM-01"],
+    "C-002": ["FM-03", "FM-01"],
+    "C-003": ["FM-01"],
+    "C-004": ["FM-01"],
+    "C-005": ["FM-01"],
+    "C-006": ["FM-06", "FM-01"],
+    "C-007": ["FM-02", "FM-08", "FM-01"],
+    "C-008": ["FM-08", "FM-05", "FM-01"],
+    "C-009": ["FM-01"],
+    "C-010": ["FM-07", "FM-04", "FM-01"],
+    "C-011": ["FM-07", "FM-04", "FM-01"],
+    "C-012": ["FM-07", "FM-04", "FM-01"],
+    "C-013": ["FM-05", "FM-02", "FM-01"],
+    "C-014": ["FM-04", "FM-05", "FM-08", "FM-01"],
+}
+
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -46,8 +66,8 @@ def build(source: Path = SOURCE) -> tuple[int, int]:
         items.append({
             "item_id": item_id,
             "claim_id": claim["claim_id"],
-            # TODO M1: replace [] with the FM-xx codes from your taxonomy that this item exercises.
-            "failure_modes": [],
+            # Unknown claims (e.g. a test fixture) stay untagged so --check still flags them.
+            "failure_modes": list(FAILURE_MODES_V1.get(claim["claim_id"], [])),
             "provenance": {"source": "lab8_public", "matrix_id": claim.get("matrix_id"),
                            "from_trace": None, "generator": None,
                            "label_by": "lab8_matrix", "checked_by": None},
