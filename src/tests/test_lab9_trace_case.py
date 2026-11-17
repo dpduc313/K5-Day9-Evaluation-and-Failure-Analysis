@@ -64,9 +64,17 @@ def test_proposal_amount(graders):
 
 @pytest.fixture(scope="module")
 def case():
+    # investigate() registers the lab9 variants into the shared lab8.shapes.SHAPES registry.
+    # Restore it afterwards so Lab 8's public-contract test still sees exactly four shapes.
+    from lab8.shapes import SHAPES
     from lab9.trace_case import investigate
 
-    return {shape: investigate(shape, "C-002", 11) for shape in ("seeded_regression", "fixed")}
+    before = dict(SHAPES)
+    try:
+        yield {shape: investigate(shape, "C-002", 11) for shape in ("seeded_regression", "fixed")}
+    finally:
+        SHAPES.clear()
+        SHAPES.update(before)
 
 
 def test_trace_case_first_wrong_step_is_model_override(case):
