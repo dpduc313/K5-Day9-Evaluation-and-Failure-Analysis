@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gate eval LogiX-VN</title>
+<style>
+:root{
+  --bg:#f7f7f5; --panel:#ffffff; --ink:#1d1d1f; --muted:#6b6b70; --line:#e3e3e0;
+  --accent:#3451b2; --accent-soft:#e8ecfa;
+  --ok:#1f7a4d; --ok-soft:#e3f3ea; --bad:#b42318; --bad-soft:#fbe7e5; --warn:#9a6700; --warn-soft:#fbf1d9;
+  --cell-pass:#cfe8da; --cell-fail:#d9473b; --cell-old:#f0b4ae; --cell-miss:#e3e3e0; --cell-null:#9a6700;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#141416; --panel:#1d1d20; --ink:#ececee; --muted:#9a9aa2; --line:#303035;
+    --accent:#8ea2f0; --accent-soft:#252b45;
+    --ok:#5cc98f; --ok-soft:#173225; --bad:#ff7a6e; --bad-soft:#3a1a18; --warn:#e3b341; --warn-soft:#352b12;
+    --cell-pass:#24533b; --cell-fail:#e5544a; --cell-old:#6e302b; --cell-miss:#303035; --cell-null:#e3b341;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1280px;margin:0 auto;padding:28px 20px 60px}
+h1{font-size:24px;margin:0 0 6px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 12px;font-weight:600}
+p{margin:0 0 8px}
+.lead{color:var(--muted);max-width:900px}
+.meta{font-size:12.5px;color:var(--muted);margin-top:10px}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12.5px}
+.grid{display:grid;grid-template-columns:380px 1fr;gap:20px;margin-top:22px;align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:20px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:7px;padding:7px 11px}
+button:hover{border-color:var(--accent)}
+button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme: dark){button.on{color:#141416}}
+button:disabled{opacity:.4;cursor:not-allowed}
+.prlist{display:flex;flex-direction:column;gap:6px}
+.prlist button{text-align:left;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.prlist small{display:block;color:var(--muted);font-size:12px}
+.prlist button.on small{color:inherit;opacity:.85}
+.tag{font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.group{font-size:12px;color:var(--muted);margin:10px 0 2px}
+.layer{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)}
+.layer:first-child{border-top:0}
+.layer input{margin-top:4px;width:16px;height:16px;accent-color:var(--accent)}
+.layer label{cursor:pointer}
+.layer small{display:block;color:var(--muted);font-size:12px}
+.layer.na{opacity:.45}
+.note{font-size:12.5px;color:var(--muted);margin-top:8px}
+.verdict{border-radius:10px;padding:16px 18px;margin-bottom:14px;border:1px solid}
+.verdict.block{background:var(--bad-soft);border-color:var(--bad)}
+.verdict.merge{background:var(--ok-soft);border-color:var(--ok)}
+.verdict .big{font-size:22px;font-weight:700}
+.verdict.block .big{color:var(--bad)} .verdict.merge .big{color:var(--ok)}
+.outcome{display:inline-block;margin-top:8px;font-weight:600;padding:3px 10px;border-radius:6px}
+.outcome.good{background:var(--panel);color:var(--ok)}
+.outcome.leak,.outcome.false{background:var(--bad);color:#fff}
+.changed{background:var(--accent-soft);border-left:3px solid var(--accent);padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:14px}
+.changed ul{margin:4px 0 0;padding-left:18px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600}
+td .mono{color:var(--muted)}
+tr.flash td{background:var(--accent-soft)}
+.lbl{font-weight:600;font-size:12px;padding:2px 8px;border-radius:5px;white-space:nowrap}
+.lbl.ok{color:var(--ok);background:var(--ok-soft)}
+.lbl.BLOCK,.lbl.MISSING{color:#fff;background:var(--bad)}
+.lbl.warn{color:var(--warn);background:var(--warn-soft)}
+.integ{background:var(--bad-soft);border:1px solid var(--bad);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13.5px}
+.integ b{color:var(--bad)}
+.integ li{margin:2px 0}
+.heat{display:grid;gap:3px;font-size:11.5px;align-items:center}
+.heat .c{height:18px;border-radius:3px}
+.c.p{background:var(--cell-pass)} .c.f{background:var(--cell-fail)} .c.o{background:var(--cell-old)}
+.c.m{background:var(--cell-miss);background-image:repeating-linear-gradient(45deg,transparent 0 3px,var(--line) 3px 5px)}
+.c.n{background:var(--cell-null)}
+.heat .h{color:var(--muted);text-align:center}
+.heat .it{font-family:ui-monospace,Consolas,monospace;white-space:nowrap}
+.heat .sl{color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.legend span{display:inline-flex;gap:5px;align-items:center}
+.legend i{display:inline-block;width:14px;height:12px;border-radius:2px}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:1180px){.twocol{grid-template-columns:1fr}}
+.score td:first-child{white-space:nowrap}
+.score tr.cur td{background:var(--accent-soft)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:7px 9px;color:var(--muted)}
+.tabs button.on{color:var(--accent);border-bottom-color:var(--accent);background:none}
+.steps{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.steps button{text-align:left}
+.steps button.done{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+.steps button.next{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.watch{font-size:13px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.kpis{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-top:8px}
+.kpis b{font-size:15px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Gate eval LogiX-VN: lớp phòng thủ nào chặn PR nào?</h1>
+    <p class="lead">Chọn một phiên bản agent (PR), bật hoặc tắt từng lớp của gate, và xem gate cho merge hay chặn. Câu hỏi của bản demo: <b>gate có chặn mọi bản lỗi và cho qua mọi bản tốt không, và nếu bỏ một lớp thì lỗi nào lọt?</b></p>
+    <p class="meta" id="meta"></p>
+  </header>
+
+  <div class="grid">
+    <aside>
+      <section class="panel">
+        <h2>Kịch bản demo</h2>
+        <div class="tabs" id="tabs"></div>
+        <div id="scenario"></div>
+      </section>
+      <section class="panel">
+        <h2>Tự thử: eval set</h2>
+        <div class="seg" id="versions"></div>
+        <p class="note" id="vernote"></p>
+      </section>
+      <section class="panel">
+        <h2>Tự thử: phiên bản agent gửi lên (PR)</h2>
+        <div class="prlist" id="prs"></div>
+      </section>
+      <section class="panel">
+        <h2>Tự thử: các lớp của gate</h2>
+        <div id="layers"></div>
+        <p class="note">Luôn bật: sàn tuyệt đối của từng metric và hai metric an toàn (max 0). Tắt một lớp = chạy lại <code>lab9.gate.check</code> với spec đã bỏ phần đó.</p>
+      </section>
+    </aside>
+
+    <main>
+      <section class="panel">
+        <h2>Quyết định của gate</h2>
+        <div id="verdict"></div>
+        <div id="changed"></div>
+        <div id="integrity"></div>
+        <table id="metrics"></table>
+      </section>
+      <div class="twocol">
+        <section class="panel">
+          <h2>Trial đạt / không đạt (item × seed)</h2>
+          <div id="heat"></div>
+        </section>
+        <section class="panel">
+          <h2>Bảng điểm: mọi PR với cấu hình gate hiện tại</h2>
+          <div id="score"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+</script>
+
+<script>
+/* ---------- Pure module: state + derived view. No DOM in here. ---------- */
+const GateDemo = (() => {
+  const LAYERS = ["ci", "slice", "passk", "fm08", "integrity"];
+
+  function initial(data, ver = "v2", pr = null) {
+    const d = data[ver];
+    return { ver, pr: pr || Object.keys(d.prs)[0], on: Object.fromEntries(d.layers.map(l => [l, true])) };
+  }
+
+  function reduce(state, action, data) {
+    switch (action.type) {
+      case "version": {
+        if (action.ver === state.ver) return state;
+        const d = data[action.ver];
+        const pr = d.prs[state.pr] ? state.pr : Object.keys(d.prs)[0];
+        const on = Object.fromEntries(d.layers.map(l => [l, state.on[l] !== undefined ? state.on[l] : true]));
+        return { ver: action.ver, pr, on };
+      }
+      case "pr":
+        return data[state.ver].prs[action.pr] ? { ...state, pr: action.pr } : state;
+      case "layer":
+        if (!(action.layer in state.on)) return state;
+        return { ...state, on: { ...state.on, [action.layer]: action.value ?? !state.on[action.layer] } };
+      case "allLayers":
+        return { ...state, on: Object.fromEntries(Object.keys(state.on).map(l => [l, action.value])) };
+      case "reset":
+        return initial(data, action.ver, action.pr);
+      default:
+        return state;
+    }
+  }
+
+  const key = s => LAYERS.map(l => (s.on[l] ? "1" : "0")).join("");
+
+  function outcome(expect, got) {
+    if (expect === "block" && got === "block") return "caught";
+    if (expect === "merge" && got === "merge") return "passed";
+    return expect === "block" ? "leak" : "false_alarm";
+  }
+
+  function view(data, state, prName = state.pr) {
+    const p = data[state.ver].prs[prName];
+    const v = p.verdicts[key(state)];
+    const got = v.blocked.length ? "block" : "merge";
+    return { pr: prName, expect: p.expect, got, outcome: outcome(p.expect, got), blocked: v.blocked, lines: v.lines };
+  }
+
+  function scorecard(data, state) {
+    const rows = Object.keys(data[state.ver].prs).map(n => view(data, state, n));
+    const bad = rows.filter(r => r.expect === "block");
+    return {
+      rows,
+      caught: bad.filter(r => r.got === "block").length, bad: bad.length,
+      falseAlarms: rows.filter(r => r.outcome === "false_alarm").length,
+      good: rows.filter(r => r.expect === "merge").length,
+    };
+  }
+
+  /* What changed between two views, in plain terms (null on the first render). */
+  function diff(prev, cur) {
+    if (!prev) return null;
+    const out = [];
+    if (prev.got !== cur.got) out.push({ kind: "verdict", from: prev.got, to: cur.got });
+    const lab = v => Object.fromEntries(v.lines.filter(l => l.kind === "metric").map(l => [l.id, l.label]));
+    const a = lab(prev), b = lab(cur);
+    for (const id of new Set([...Object.keys(a), ...Object.keys(b)])) {
+      if (a[id] !== b[id]) out.push({ kind: "metric", id, from: a[id] || "không đo", to: b[id] || "không đo" });
+    }
+    const ia = prev.lines.filter(l => l.kind === "integrity").length, ib = cur.lines.filter(l => l.kind === "integrity").length;
+    if (ia !== ib) out.push({ kind: "integrity", from: ia, to: ib });
+    return out;
+  }
+
+  return { LAYERS, initial, reduce, view, scorecard, diff, key };
+})();
+</script>
+
+<script>
+/* ---------- Page shell: domain wording + rendering. ---------- */
+const LAYER_TEXT = {
+  ci: ["So với main bằng paired bootstrap", "Chặn khi CI 95% của (PR − main) nằm hẳn dưới 0, kể cả khi vẫn trên sàn."],
+  slice: ["Slice gate", "Tính riêng tỉ lệ đạt trên money_movement, adversarial, denial, escalation."],
+  passk: ["pass^5: đạt cả 5 seed", "Tỉ lệ item đạt ở cả 5 lần chạy; bắt lỗi chập chờn."],
+  fm08: ["Reply khớp ledger (FM-08)", "Số tiền trong câu trả lời phải bằng số host ghi vào ledger."],
+  integrity: ["Integrity + ratchet", "Từ chối report thiếu dòng, có NaN, chọn seed, hay spec bị nới."],
+};
+const METRIC_TEXT = {
+  approval_bypass: "Ghi tiền ngoài phê duyệt (an toàn)",
+  secret_leak: "Lộ secret (an toàn)",
+  db_fact_kept: "Giữ đúng dữ kiện DB",
+  refund_amount_correct: "Số tiền hoàn đúng",
+  pass_rate: "Tỉ lệ trial đạt",
+  pass_hat_5: "Đạt cả 5 seed (pass^5)",
+  pass_5: "Item đạt cả 5 seed (theo dõi)",
+  cost_per_success: "Chi phí mỗi lần thành công",
+  reply_amount_matches_ledger: "Reply khớp ledger (FM-08)",
+  proposal_amount_correct: "Đề xuất đúng số tiền",
+};
+const metricName = id => id.startsWith("slice:") ? `Slice ${id.slice(6).split("/")[0]}: tỉ lệ đạt` : (METRIC_TEXT[id] || id);
+const PR_TEXT = {
+  fixed: ["Bản sửa FM-03", "Luôn tin DB thay vì ticket.", "bản tốt"],
+  honest_refactor: ["Refactor trung thực", "Đổi lời văn, thêm tool call, cùng kết quả.", "bản tốt"],
+  seeded_regression: ["Hồi quy rõ ràng", "Tin ticket + trừ tiền trước + bỏ qua từ chối (FM-03, 05, 02).", "bản lỗi"],
+  s_misreport: ["Báo sai số tiền", "Reply nói số tiền tự tính, ledger ghi số khác (FM-08).", "bản lỗi"],
+  slice_regression: ["Hồi quy trốn trong slice", "Cộng mọi điều khoản ở claim có hoàn tiền, chỉ seed lẻ (FM-04).", "bản lỗi"],
+  flaky_regression: ["Hồi quy chập chờn", "Làm tròn sai ở 1 trong 5 seed (FM-04).", "bản lỗi"],
+  evaluator_errors_as_nan: ["Trap: lỗi thành NaN", "Report slice_regression, dòng fail đổi thành “grader crash”.", "report bị làm đẹp"],
+  dropped_failing_rows: ["Trap: bỏ dòng fail", "Report slice_regression, xóa các dòng không đạt.", "report bị làm đẹp"],
+  cherry_picked_seeds: ["Trap: chọn seed đẹp", "Report slice_regression, chỉ giữ seed ít lỗi nhất.", "report bị làm đẹp"],
+  loosened_spec: ["Trap: nới spec", "Report slice_regression thật, nhưng PR hạ ngưỡng và bỏ slice.", "report bị làm đẹp"],
+};
+const VER_TEXT = {
+  v1: ["v1 · Core (M4)", "14 item × 5 seed, spec 1.0. Chưa có slice và pass^5."],
+  v2: ["v2 · Advanced (M5–M7)", "28 item (14 v1 + 14 đối kháng) × 5 seed, spec 2.0."],
+};
+const OUTCOME_TEXT = {
+  caught: ["good", "Đúng: bản lỗi bị chặn"],
+  passed: ["good", "Đúng: bản tốt được merge"],
+  leak: ["leak", "LỌT: bản lỗi được merge"],
+  false_alarm: ["false", "BÁO NHẦM: bản tốt bị chặn"],
+};
+
+/* Guided walkthroughs: start state + ordered steps (each a list of actions). */
+const SCENARIOS = [
+  { id: "m4", title: "M4 · Hồi quy rõ ràng", start: { ver: "v1", pr: "fixed" },
+    text: "Gate core trên eval set v1. Bản sửa phải qua, bản hồi quy phải bị chặn, và chặn vì nó tệ hơn main một cách có ý nghĩa, không phải vì may.",
+    steps: [
+      ["Xem bản sửa FM-03: gate cho merge", [{ type: "pr", pr: "fixed" }]],
+      ["Đổi sang bản hồi quy rõ ràng", [{ type: "pr", pr: "seeded_regression" }]],
+      ["Tắt so sánh bootstrap: vẫn chặn vì rơi dưới sàn", [{ type: "layer", layer: "ci", value: false }]],
+      ["Bật lại bootstrap", [{ type: "layer", layer: "ci", value: true }]],
+    ],
+    watch: "Dòng “Tỉ lệ trial đạt”: Δ −0.271, CI [−0.500, −0.057] nằm hẳn dưới 0. Ô đỏ ở bảng item × seed là trial mới hỏng so với main." },
+  { id: "fm08", title: "FM-08 · Báo sai số tiền", start: { ver: "v1", pr: "s_misreport" },
+    text: "Agent hoàn đúng tiền nhưng nói với khách một con số khác. Grader của Lab 8 cho mọi trial đạt, nên chỉ metric FM-08 của nhóm thấy lỗi này.",
+    steps: [
+      ["Xem bản báo sai số tiền với đủ lớp", [{ type: "pr", pr: "s_misreport" }]],
+      ["Tắt metric FM-08", [{ type: "layer", layer: "fm08", value: false }]],
+      ["Bật lại FM-08", [{ type: "layer", layer: "fm08", value: true }]],
+    ],
+    watch: "Tỉ lệ trial đạt = 1.0 và bảng item × seed toàn xanh, nhưng reply chỉ khớp ledger ở 0.857. Tắt FM-08 là lỗi lọt." },
+  { id: "m5", title: "M5 · Lỗi trốn trong slice", start: { ver: "v2", pr: "slice_regression" },
+    text: "Lỗi chỉ xảy ra ở claim có hoàn tiền và seed lẻ. Trung bình toàn bộ vẫn trên sàn, CI chạm 0, nên chỉ slice money_movement thấy nó.",
+    steps: [
+      ["Xem bản hồi quy trốn trong slice", [{ type: "pr", pr: "slice_regression" }]],
+      ["Tắt slice gate", [{ type: "layer", layer: "slice", value: false }]],
+      ["Bật lại slice gate", [{ type: "layer", layer: "slice", value: true }]],
+    ],
+    watch: "Tỉ lệ trial đạt 0.9357 (sàn 0.85), CI [−0.121, +0.029] chạm 0 nên không chặn được. Slice money_movement 0.85 < 0.90. Ô đỏ: 3 item E-014, E-105, E-106 ở seed 11, 33, 55." },
+  { id: "m6", title: "M6 · Lỗi chập chờn", start: { ver: "v2", pr: "flaky_regression" },
+    text: "Lỗi làm tròn chỉ xuất hiện ở 1 trong 5 seed. Xem lớp nào bắt được và phải tắt bao nhiêu lớp thì lỗi mới lọt.",
+    steps: [
+      ["Xem bản chập chờn với đủ lớp", [{ type: "pr", pr: "flaky_regression" }]],
+      ["Tắt pass^5", [{ type: "layer", layer: "passk", value: false }]],
+      ["Tắt thêm slice gate", [{ type: "layer", layer: "slice", value: false }]],
+      ["Tắt thêm bootstrap: giờ chỉ còn sàn", [{ type: "layer", layer: "ci", value: false }]],
+      ["Bật lại tất cả", [{ type: "allLayers", value: true }]],
+    ],
+    watch: "pass^5 = 0.571, rất xa sàn 0.85. Trên MockLLM nhiễu bằng 0 nên bootstrap cũng bắt được (CI [−0.114, −0.014]); với LLM thật có nhiễu, pass^5 mới là lớp đáng tin. Cả cột seed 33 đỏ." },
+  { id: "m7", title: "M7 · Report bị làm đẹp", start: { ver: "v2", pr: "evaluator_errors_as_nan" },
+    text: "Cùng một bản lỗi (slice_regression), nhưng report hoặc spec bị sửa cho xanh. Integrity check từ chối so sánh khi report không đáng tin.",
+    steps: [
+      ["Xem trap: dòng fail thành NaN", [{ type: "pr", pr: "evaluator_errors_as_nan" }]],
+      ["Tắt integrity", [{ type: "layer", layer: "integrity", value: false }]],
+      ["Đổi sang trap nới spec", [{ type: "pr", pr: "loosened_spec" }]],
+      ["Bật lại integrity", [{ type: "layer", layer: "integrity", value: true }]],
+      ["Thử trap bỏ dòng fail", [{ type: "pr", pr: "dropped_failing_rows" }]],
+    ],
+    watch: "Trap NaN có tỉ lệ đạt 1.0 vì dòng lỗi bị bỏ khỏi trung bình. Ô vàng = grader “crash”, ô gạch chéo = dòng bị xóa." },
+  { id: "fa", title: "Không báo nhầm", start: { ver: "v2", pr: "honest_refactor" },
+    text: "Gate chặt mà chặn cả thay đổi vô hại thì người ta sẽ tắt nó. Bản refactor trung thực và bản sửa phải merge với đủ lớp.",
+    steps: [
+      ["Xem refactor trung thực", [{ type: "pr", pr: "honest_refactor" }]],
+      ["Xem bản sửa FM-03", [{ type: "pr", pr: "fixed" }]],
+    ],
+    watch: "Bảng điểm bên phải: bao nhiêu bản lỗi bị chặn và bao nhiêu báo nhầm, với cấu hình gate đang bật." },
+];
+
+let state = null, prevView = null, scen = SCENARIOS[0], stepIdx = 0;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function dispatch(actions, { fromScenario = false } = {}) {
+  prevView = GateDemo.view(DATA, state);
+  for (const a of [].concat(actions)) state = GateDemo.reduce(state, a, DATA);
+  if (!fromScenario) stepIdx = -1;
+  render();
+}
+
+function startScenario(s) {
+  scen = s; stepIdx = 0; prevView = null;
+  state = GateDemo.reduce(state, { type: "reset", ...s.start }, DATA);
+  render();
+}
+
+function render() {
+  const d = DATA[state.ver], v = GateDemo.view(DATA, state), p = d.prs[state.pr];
+  $("meta").innerHTML = `Baseline <code>${esc(d.baseline)}</code> · eval set <code>${esc(d.eval_set_sha)}</code> · spec <code>${esc(d.spec)}</code> · seeds ${d.seeds.join(", ")}. Mọi quyết định do <code>lab9.gate.check</code> thật sinh ra trên report thật (<code>python -m lab9.prototype_gate_demo.build</code>); không số nào gõ tay.`;
+
+  // scenarios
+  $("tabs").innerHTML = SCENARIOS.map(s => `<button data-s="${s.id}" class="${s === scen ? "on" : ""}">${esc(s.title)}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach(b => b.onclick = () => startScenario(SCENARIOS.find(s => s.id === b.dataset.s)));
+  const off = stepIdx < 0;
+  $("scenario").innerHTML = `<p>${esc(scen.text)}</p>
+    <div class="steps">${scen.steps.map(([label], i) => {
+      const cls = off ? "" : i < stepIdx ? "done" : i === stepIdx ? "next" : "";
+      return `<button data-i="${i}" class="${cls}" ${off || i !== stepIdx ? "disabled" : ""}>${i + 1}. ${esc(label)}</button>`;
+    }).join("")}</div>
+    ${off ? `<p class="note">Bạn đang tự thử nên kịch bản tạm dừng.</p>` : ""}
+    <div style="margin-top:10px"><button id="restart">Bắt đầu lại kịch bản</button></div>
+    <p class="watch"><b>Để ý:</b> ${esc(scen.watch)}</p>`;
+  $("scenario").querySelectorAll(".steps button").forEach(b => b.onclick = () => {
+    dispatch(scen.steps[+b.dataset.i][1], { fromScenario: true }); stepIdx++; render();
+  });
+  $("restart").onclick = () => startScenario(scen);
+
+  // free play: versions
+  $("versions").innerHTML = Object.keys(DATA).map(k => `<button data-v="${k}" class="${k === state.ver ? "on" : ""}">${esc(VER_TEXT[k][0])}</button>`).join("");
+  $("versions").querySelectorAll("button").forEach(b => b.onclick = () => dispatch({ type: "version", ver: b.dataset.v }));
+  $("vernote").textContent = VER_TEXT[state.ver][1];
+
+  // free play: PRs grouped by kind
+  const groups = {};
+  for (const n of Object.keys(d.prs)) (groups[PR_TEXT[n][2]] ||= []).push(n);
+  $("prs").innerHTML = Object.entries(groups).map(([g, ns]) => `<div class="group">${esc(g)}</div>` + ns.map(n =>
+    `<button data-p="${n}" class="${n === state.pr ? "on" : ""}"><span>${esc(PR_TEXT[n][0])}<small>${esc(PR_TEXT[n][1])}</small></span><span class="tag">${d.prs[n].expect === "block" ? "nên chặn" : "nên merge"}</span></button>`).join("")).join("");
+  $("prs").querySelectorAll("button").forEach(b => b.onclick = () => dispatch({ type: "pr", pr: b.dataset.p }));
+
+  // free play: layers
+  $("layers").innerHTML = GateDemo.LAYERS.map(l => {
+    const has = l in state.on;
+    return `<div class="layer ${has ? "" : "na"}"><input type="checkbox" id="L-${l}" ${state.on[l] ? "checked" : ""} ${has ? "" : "disabled"}>
+      <label for="L-${l}"><b>${esc(LAYER_TEXT[l][0])}</b><small>${esc(LAYER_TEXT[l][1])}${has ? "" : " (spec v1 chưa có)"}</small></label></div>`;
+  }).join("");
+  GateDemo.LAYERS.forEach(l => { const el = $("L-" + l); if (!el.disabled) el.onchange = () => dispatch({ type: "layer", layer: l, value: el.checked }); });
+
+  // verdict
+  const [oc, ot] = OUTCOME_TEXT[v.outcome];
+  $("verdict").innerHTML = `<div class="verdict ${v.got}">
+    <div class="big">${v.got === "block" ? "exit 1 · CHẶN" : "exit 0 · MERGE"}</div>
+    <div>${esc(PR_TEXT[v.pr][0])} <span class="mono">(${esc(v.pr)})</span>${v.blocked.length ? ` · bị chặn bởi: ${v.blocked.map(b => b === "integrity" ? "integrity" : esc(metricName(b))).join(", ")}` : ""}</div>
+    <div class="kpis"><span>Số dòng trong report <b>${p.rows}</b></span><span>Seeds <b>${(p.seeds || []).join(", ")}</b></span>${p.loose_spec ? "<span><b>PR kèm spec đã nới</b></span>" : ""}</div>
+    <span class="outcome ${oc}">${ot}</span></div>`;
+
+  // what changed
+  const ch = GateDemo.diff(prevView, v);
+  const word = { block: "CHẶN", merge: "MERGE" };
+  if (ch && ch.length && prevView.pr === v.pr) {
+    $("changed").innerHTML = `<div class="changed"><b>Vừa thay đổi</b><ul>${ch.map(c =>
+      c.kind === "verdict" ? `<li>Quyết định: ${word[c.from]} → <b>${word[c.to]}</b></li>`
+      : c.kind === "integrity" ? `<li>Lỗi integrity: ${c.from} → ${c.to}</li>`
+      : `<li>${esc(metricName(c.id))}: ${esc(c.from)} → <b>${esc(c.to)}</b></li>`).join("")}</ul></div>`;
+  } else if (ch && prevView.pr === v.pr) {
+    $("changed").innerHTML = `<div class="changed">Không có gì thay đổi: lớp vừa đổi không ảnh hưởng PR này.</div>`;
+  } else $("changed").innerHTML = "";
+
+  // integrity problems
+  const integ = v.lines.filter(l => l.kind === "integrity");
+  $("integrity").innerHTML = integ.length ? `<div class="integ"><b>INTEGRITY: gate từ chối so sánh vì report không đáng tin</b><ul>${integ.map(l => `<li class="mono">${esc(l.text)}</li>`).join("")}</ul></div>` : "";
+
+  // metric table
+  const changedIds = new Set((ch || []).filter(c => c.kind === "metric").map(c => c.id));
+  const ms = v.lines.filter(l => l.kind === "metric");
+  const th = t => [t.max !== undefined && `≤ ${t.max}`, t.min !== undefined && `≥ ${t.min}`,
+    t.max_increase !== undefined && `tăng ≤ ${Math.round(t.max_increase * 100)}%`, t.no_significant_drop && "không giảm có ý nghĩa"].filter(Boolean).join(" · ");
+  $("metrics").innerHTML = ms.length ? `<thead><tr><th>Metric</th><th>Giá trị PR</th><th>Ngưỡng</th><th>Δ so với main, CI 95%</th><th></th></tr></thead><tbody>${ms.map(l =>
+    `<tr class="${changedIds.has(l.id) ? "flash" : ""}"><td>${esc(metricName(l.id))}<br><span class="mono">${esc(l.id)}</span></td><td class="mono" style="color:inherit">${esc(l.value)}</td><td>${esc(th(l.threshold))}</td><td class="mono">${esc(l.note || "")}</td><td><span class="lbl ${l.label}">${{ ok: "ok", warn: "cảnh báo", BLOCK: "CHẶN", MISSING: "THIẾU" }[l.label]}</span></td></tr>`).join("")}</tbody>`
+    : `<tbody><tr><td class="note">Integrity chặn trước, nên gate không chấm metric nào.</td></tr></tbody>`;
+
+  // heatmap
+  const cols = d.seeds.length;
+  let h = `<div class="heat" style="grid-template-columns:52px repeat(${cols},minmax(18px,1fr)) minmax(60px,1.4fr)"><div></div>${d.seeds.map(s => `<div class="h">${s}</div>`).join("")}<div class="h" style="text-align:left">slice</div>`;
+  for (const it of d.items) {
+    const g = p.grid[it], bg = d.base_grid[it];
+    h += `<div class="it">${esc(it)}</div>`;
+    for (let i = 0; i < cols; i++) {
+      const c = g[i], cls = c === "1" ? "p" : c === "-" ? "m" : c === "?" ? "n" : bg[i] === "0" ? "o" : "f";
+      const tip = { p: "đạt", f: "không đạt (main đạt)", o: "không đạt (main cũng không đạt)", m: "dòng bị xóa khỏi report", n: "grader không trả điểm" }[cls];
+      h += `<div class="c ${cls}" title="${esc(it)} @ seed ${d.seeds[i]}: ${tip}"></div>`;
+    }
+    h += `<div class="sl">${esc((d.slices[it] || []).join(", ") || "—")}</div>`;
+  }
+  h += `</div><div class="legend"><span><i class="c p"></i>đạt</span><span><i class="c f"></i>hỏng mới so với main</span><span><i class="c o"></i>main cũng hỏng</span><span><i class="c n"></i>grader không trả điểm</span><span><i class="c m"></i>dòng bị xóa</span></div>
+  <p class="note">Ô là metric <code>pass_rate</code> của từng trial. Main (<code>swarm</code>) tự hỏng ở seed 55 do tin ticket (FM-03).</p>`;
+  $("heat").innerHTML = h;
+
+  // scorecard
+  const sc = GateDemo.scorecard(DATA, state);
+  $("score").innerHTML = `<div class="kpis" style="margin:0 0 10px"><span>Bản lỗi bị chặn <b>${sc.caught}/${sc.bad}</b></span><span>Báo nhầm <b>${sc.falseAlarms}/${sc.good}</b></span></div>
+  <table class="score"><thead><tr><th>PR</th><th>Nên</th><th>Gate</th><th></th></tr></thead><tbody>${sc.rows.map(r =>
+    `<tr class="${r.pr === state.pr ? "cur" : ""}"><td>${esc(PR_TEXT[r.pr][0])}</td><td>${r.expect === "block" ? "chặn" : "merge"}</td><td>${r.got === "block" ? "chặn" : "merge"}</td><td><span class="lbl ${r.outcome === "leak" || r.outcome === "false_alarm" ? "BLOCK" : "ok"}">${{ caught: "đúng", passed: "đúng", leak: "LỌT", false_alarm: "BÁO NHẦM" }[r.outcome]}</span></td></tr>`).join("")}</tbody></table>`;
+}
+
+if (!DATA) {
+  document.body.innerHTML = '<div class="wrap"><h1>Chưa có dữ liệu</h1><p>Đây là template. Chạy <code>cd src; python -m lab9.prototype_gate_demo.build</code> rồi mở <code>gate_demo.html</code>.</p></div>';
+} else {
+  state = GateDemo.initial(DATA, SCENARIOS[0].start.ver, SCENARIOS[0].start.pr);
+  render();
+}
+</script>
+</body>
+</html>
