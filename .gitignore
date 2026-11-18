@@ -14,6 +14,8 @@ __pycache__/
 src/reports/
 src/traces/
 traces/
+# Log Inspect AI của bonus: python -m lab9.inspect_port --log-dir logs/inspect
+src/logs/
 *.sqlite
 *.sqlite-*
 student_drop/
